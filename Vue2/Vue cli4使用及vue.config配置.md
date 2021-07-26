@@ -19,7 +19,7 @@ tags:
 
 创建流程：Enter确认下一步，空格键确认选中（自己根据项目需要选择即可）
 
-<img src="D:\Vicer\link\study-note\Vue2\img\cli4\cli创建项目的过程.png" alt="image-20210606185335719" style="zoom: 80%;" />
+<img src=".\img\cli4\cli创建项目的过程.png" alt="image-20210606185335719" style="zoom: 80%;" />
 
 创建完成目录文件介绍：
 
