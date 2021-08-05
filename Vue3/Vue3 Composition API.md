@@ -175,11 +175,13 @@ export default {
 </script>
 ```
 
-**总结：**
+##### Ref和Reactive的小结
 
-* Ref 在setup中无论以那种形式都需要通过value改变属性的值。
+* (reactive/ref)包裹数据，在页面中都可以帮助其自动解包（除非用普通对象包裹ref变量）
+* ref 在setup中需要通过`.value`改变属性的值，而reactive不需要
+* ref支持所有数据类型，而reactive只支持对象/数组
 
-* (reactive/ref)对象包裹变量，都可以帮助其自动解包，但在setup中使用方法略有不同，`ref支持所有数据类型，而reactive只支持对象`
+**建议：当包裹原始数据类型时，使用ref；当包裹对象/数组时，使用reactive**
 
 ##### Readonly API
 
@@ -420,17 +422,51 @@ export default {
 }
 ```
 
-#### setup函数中使用computed和watch
+#### setup中使用ref访问元素
 
-##### computed
+> 在$optionsAPI中可以通过this.$ref访问元素或组件,那么在setup中如何使用呢
 
-> 计算属性改为引入方式使用
+使用方法：其实非常简单，我们只需要定义一个ref对象为null，然后绑定到元素或者组件的ref属性上即可；
 
-使用方式一：
+```vue
+<template>
+  </div>
+    <h2 ref="home">Home</h2>
+    <button @click="getRefEl">获取当前ref</button>
+  </div>
+</template>
+
+<script>
+import {ref} from "vue";
+export default {
+  setup() {
+    let home = ref(null)
+
+    let getRefEl = () => {
+      console.log(home.value)
+    }
+
+    return {
+      home
+      getRefEl,
+    }
+  }
+}
+```
+
+#### 何时使用ref或reactive
+
+### computed API
+
+在Composition API中，computed和watch结合了以往的使用，增加了一些新的使用方式
+
+
+
+**使用方式一：**
 
 接收一个getter函数，并为 getter 函数返回的值，返回一个不变的 **ref 对象**
 
-使用方式二：
+**使用方式二：**
 
 接收一个具有 get 和 set 的对象，返回一个**可变的（可读写）ref 对象**；
 
@@ -470,6 +506,452 @@ export default {
 </script>
 ```
 
-##### watch
+### watch API
 
-1：08
+> 在Composition API中，我们可以使用watchEffect和watch来完成响应式数据的侦听；
+
+* watchEffect用于自动收集响应式数据的依赖；（即自动监听`当前函数中`的**数据依赖**，并且`首次数据值也会被监听`到）
+* watch需要手动指定侦听的数据源；（即手动选择监听目标）
+
+#### watchEffect
+
+##### 基本使用
+
+注意：watchEffect虽然会自动收集函数中数据依赖，但不会收集setTimeout中的数据（vue版本3.0）
+
+```js
+import {ref, watchEffect} from "vue";
+
+export default {
+ setup() {
+    let firstName = ref('张')
+    let lastName = ref('三')
+
+    watchEffect(()=>{
+      console.log(firstName.value);	// 根据只监听当前函数中的数据依赖原则，其他数据改变时，不会触发watchEffect
+    })
+    let changeName = () => {
+      firstName.value = '李'
+      lastName.value = '四'
+    }
+ }
+}
+```
+
+
+
+##### 停止监听
+
+> 当我们需要停止监听函数时，可以利用watchEffect返回值函数，来调用该函数进行停止
+
+```js
+let age = ref(18)
+let stopWatch = watchEffect(() => {
+  console.log(age.value);
+})
+let changeName = () => {
+  age.value++
+  if (age.value > 20) {
+    stopWatch()
+  }
+}
+```
+
+##### 清除副作用
+
+> 当我们监听网络请求时，由于网络请求时间不确定性，数据还未到达我们便停止了侦听器。但网络请求终会到达，这时我们需要取消网络请求，就需要用到watchEffect的参数：onInvalidate
+
+**onInvalidate介绍**：onInvalidate是watchEffect的一个参数，同时它又一个函数，当`watchEffect函数重新执行、或watchEffect被停止时，都会调用该函数`，所以onInvalidate一般用来做一些清除操作（因为onInvalidate是参数，所以可以被随意命名）
+
+
+
+**和停止监听的区别：**stopWatch会完全停止监听，而onInvalidate更多用来清除上一次watchEffect中的操作
+
+```js
+let age = ref(18)
+
+watchEffect((onInvalidate) => {
+  let timer = setTimeout(function () {
+    console.log('网络请求成功')
+  }, 1000)
+
+  onInvalidate(() => {	// 清除副作用
+    clearTimeout(timer)
+  })
+  console.log(age.value);
+})
+
+let changeName = () => {
+  age.value++
+}
+```
+
+##### watchEffect的执行时机
+
+> 当在watchEffect中，使用ref属性来获取某个元素或者组件时，watchEffect会被执行两次
+
+```vue
+<template>
+	<h2 ref="home" class="aaa">Home</h2>
+</template>
+
+<script>
+import {ref, watchEffect} from "vue";
+  
+export default {
+  setup() {
+    let home = ref(null)
+
+    watchEffect(() => {
+      console.log(home.value)//  第一次=> null  第二次=> <h2></h2>
+    })
+
+    return {
+      home
+    }
+  }
+}
+```
+
+因为：
+
+* watchEffect在setup函数中会立即执行监听的数据。而此时DOM还没有挂在，所以显示null
+* 而当DOM挂载时，会给title的ref对象赋值新的值，副作用函数会再次执行，打印出来对应的元素
+
+* 调整watchEffect的执行时机
+
+  > watchEffect除了可以传递函数，还可以传入一个配置项，来决定执行时机
+
+  `{flush:'pre' | 'post' | 'sync'}`
+
+  ```js
+  watchEffect(() => {
+    console.log(home.value)
+  },{
+    flush:'pre' 	// 默认是pre ，在元素挂在或更新之前执行
+  //flush:'post'  // 在DOM挂载完成之后执行
+  //flush:'sync'  // 通过执行，但这个性能很低，不建议使用
+  })
+  ```
+
+  所以在watchEffect时，想要`监听ref实例`或者`需要等待DOM渲染完成才监听变化`时，就可以配置`{flush:'post'}`选项
+
+
+
+#### watch
+
+> watch的API完全等同于$options的watch选项的属性
+
+**与watchEffect的区别**
+
+* 懒执行副作用（第一次不会直接执行）
+
+* 更具体的说明当哪些状态发生变化时，触发侦听器的执行
+
+* 访问侦听状态newVal和oldVal值
+
+##### 基本使用
+
+* 监听getter函数中引用的可响应式对象（比如reactive或者ref）；
+
+* 直接写入一个可响应式的对象，reactive或者ref（比较常用的是ref）
+
+  ```js
+  // 监听reactive对象
+  setup(){
+    let info = reactive({
+      name: 'vicer',
+      age: 18
+    })
+  	// 方法一：只监听对象属性
+    watch(() => info.name, (newVal, oldVal) => {
+      console.log(newVal, oldVal)
+    })
+    
+    // 方法二：监听对象所有属性   
+    watch(info, (newVal, oldVal) => {		// 缺点：不能监听到oldVal,reactive/ref都是如此
+      console.log(newVal, oldVal)
+    })
+   	// 解决办法：
+    // 响应式对象解构后变成普通对象或数组，即可正常监听到oldVal
+    watch(() => ({...info}), (newVal, oldVal) => {
+      console.log(newVal, oldVal)
+    })
+  }
+  ```
+
+  ```js
+  // 监听ref对象
+  setup(){
+    let info = ref({
+      name: 'vicer',
+      age: 18
+    })
+  	// 方法一：只监听对象属性
+    watch(() => info.value.name, (newVal, oldVal) => {
+      console.log(newVal, oldVal)
+    })
+    // 或者直接使用ref监听单一属性
+    let name = ref('vicer')
+    watch(name, (newVal, oldVal) => {
+      console.log(newVal, oldVal)
+    })
+    
+  }
+  ```
+
+**总结：**
+
+* `当只监听一个属性时，使用ref响应式`进行监听。
+
+* 当`对象/数组中所有数据都要监听时，使用getter方法解构对象/数组，可对所有属性进行监听`。（如果`无需监听oldVal，直接传入响应式对象`即可）
+
+##### 监听多个数据源
+
+> 当监听参数中传入数组，即可监听多个数据源
+
+```js
+setup(){
+  let name = ref('vicer')
+  let age = ref(18)
+
+  watch([name, age], (newVal, oldVal) => {
+    // (newVal, oldVal)  可以解构成 [newName, newAge], [oldName, oldAge]
+    console.log(newVal, oldVal)
+  })
+}
+```
+
+##### watch的选项
+
+> watch的选项和之前的$options的选项相同
+
+* `deep` 深层监听   (当直接传递reactive对象时，默认开启)
+* `immediate`   立即执行
+
+```js
+setup(){
+  let name = ref('vicer')
+
+  watch(name, (newVal, oldVal) => {
+    console.log(newVal, oldVal)
+  },{
+    deep:true,
+    immediate:true
+  })
+}
+```
+
+### 生命周期
+
+> 在setup中，可以使用对应的生命周期，和原来的相比，只需要在前面加上一个on即可，如原来的mounted改为onMounted
+
+| 选项式 API      | Hook inside `setup` |
+| --------------- | ------------------- |
+| `beforeCreate`  | Not needed*         |
+| `created`       | Not needed*         |
+| `beforeMount`   | `onBeforeMount`     |
+| `mounted`       | `onMounted`         |
+| `beforeUpdate`  | `onBeforeUpdate`    |
+| `updated`       | `onUpdated`         |
+| `beforeUnmount` | `onBeforeUnmount`   |
+| `unmounted`     | `onUnmounted`       |
+| `activated`     | `onActivated`       |
+| `deactivated`   | `onDeactivated`     |
+
+提示：`在setup中不再需要beforeCreate和created`，因为在源码中，setup早于它们执行，所以这两个生命周期的代码直接写在setup函数中即可
+
+使用方法：
+
+```js
+import {onMounted} from "vue";
+
+  setup() {
+    onMounted(() => {
+      console.log('APP Mounted')
+    })
+  }
+```
+
+### Provide和Inject函数
+
+>  Provide和Inject是向组件深度传递接收数据，Composition API也可以替代之前的 Provide 和 Inject 的选项
+
+Provide使用：`provide('属性名称', 属性值)`
+
+Inject使用：`inject('接收的provide属性名','默认值')`   （默认值是可选参数）
+
+在使用Provide和Inject之前，我们先了解一下什么是**单项数据流**
+
+#### 单向数据流
+
+指父组件向子组件传递数据，但子组件不能逆向更改在父组件定义的数据，除非向父组件发送事件进行更改。这个便是单向数据流
+
+
+
+为什么这样做：因为当父组件下面有多个子组件时，子组件可以随意更改父组件数据，当出bug时，难以定位出问题的组件，所以在组件数据最好在数据提供的位置来修改
+
+#### 根据单向数据流使用Provide和Inject
+
+```js
+// 父组件
+import {ref, readonly, provide} from "vue";
+
+export default {
+  name: "App",
+  components: {
+    Child
+  },
+  setup() {
+    let name = ref('viceroy')
+    provide('name', readonly(name))
+    
+    let changeName = ()=>{
+      name.value = 'vicer'
+    }
+  }
+}
+```
+
+```js
+// 子组件
+import {inject} from "vue";
+
+export default {
+  name: "Child",
+  setup() {
+    let name = inject('name')
+    // 当父组件不使用readonly时，子组件是可以更改的，为了保证单项数据流，所以不推荐子组件直接更改父组件的数据
+    let changeName = () => {
+      name.value = 'tace'
+    }
+  }
+}
+```
+
+
+
+### Use之逻辑抽离
+
+> 类似react的hook，指把对应程序代码抽离成函数，当我们想使用某个程序时，只需执行并取出函数进行操作即可
+
+#### useCounter
+
+当我们使用setup时，所有函数和定义都放在setup中，我们可以使用useCounter方法进行代码抽离。
+
+注意：在实际使用的时候可以不用叫useCounter，叫其他名字也可以，但是社区里面一般都称之为useCounter
+
+```vue
+<!-- App.vue -->
+<template>
+  <div>
+    <p>计数：{{ count }}</p>
+    <p>2倍计数：{{ doubleCount }}</p>
+    <button @click="add">+</button>
+    <button @click="less">-</button>
+  </div>
+</template>
+
+<script>
+import useCounter from './hook/useCounter'
+
+export default {
+  name: "App",
+  setup() {
+    let {count, doubleCount, add, less} = useCounter()
+
+    return {
+      count,
+      doubleCount,
+      add,
+      less
+    }
+  }
+}
+</script>
+```
+
+```js
+// useCounter.js
+import {computed, ref} from "vue";
+
+export default function () {
+  let count = ref(0)
+  let doubleCount = computed(() => count.value * 2)
+
+  let add = () => count.value++;
+  let less = () => count.value--;
+
+  return {count, doubleCount, add, less}
+}
+```
+
+#### useTitle
+
+> 我们编写一个修改title的Hook
+
+```js
+// App.vue
+import useTitle from "./hook/useTitle";
+
+setup() {
+  let titleRef = useTitle('哈哈')
+  setTimeout(() => {
+    titleRef.value = '呵呵'
+  },2000)
+}
+```
+
+```js
+// useTitle.js
+import {ref, watch} from 'vue'
+
+export default function (title = '默认值') {
+  const titleRef = ref(title)
+  watch(titleRef, (newVal) => {
+    document.title = newVal
+  }, {
+    immediate: true
+  })
+  return titleRef
+}
+```
+
+#### useLocalStorage
+
+> 来完成一个使用 localStorage 存储和获取数据的Hook
+
+```js
+// App.vue
+import useLocalStorage from "./hook/useLocalStorage";
+
+setup() {
+	let data = useLocalStorage('info',{name:'vicer',age:18})
+   data.value = 'tace'
+}
+```
+
+```js
+//  useLocalStorage.js
+import {ref, watch} from 'vue'
+
+export default function (key, value) {
+  let data = ref(value)
+
+  if (value) {
+    window.localStorage.setItem(key, JSON.stringify(value))
+  } else {
+    data.value = JSON.parse(window.localStorage.getItem(key))
+  }
+
+  watch(data, (newVal) => {
+    window.localStorage.setItem(key, JSON.stringify(newVal))
+  })
+  return data
+}
+```
+
+
+
+1.20
+
