@@ -424,7 +424,7 @@ export default {
 
 #### setup中使用ref访问元素
 
-> 在$optionsAPI中可以通过this.$ref访问元素或组件,那么在setup中如何使用呢
+> 在$optionsAPI中可以通过this.$refs访问元素或组件,那么在setup中如何使用呢
 
 使用方法：其实非常简单，我们只需要定义一个ref对象为null，然后绑定到元素或者组件的ref属性上即可；
 
@@ -953,5 +953,80 @@ export default function (key, value) {
 
 
 
-1.20
+### setp顶层编写方法
+
+> 这个是实验性特性，不建议大量使用（目前版本vue3.0）
+
+> 官方使用文档：https://github.com/vuejs/rfcs/blob/master/active-rfcs/0040-script-setup.md
+
+介绍：直接在`script`标签中加入`setup`属性，则script标签内写的所有方法会自动被转化为setup函数
+
+#### 基础用法
+
+```vue
+// App.vue
+<template>
+  <div>
+    <p>{{ count }}</p>
+    <button @click="changCount">按钮</button>
+  </div>
+</template>
+
+<script setup>
+import {ref} from 'vue'
+
+let count = ref(0)
+let changCount = () => count.value++
+</script>
+```
+
+#### 组件用法
+
+```vue
+// App.vue
+<template>
+  <div>
+		APP组件
+     <!-- 传递msg属性，并接收修改方法 -->
+    <hello-world :msg="msg" @setMsg="setMsg"></hello-world>
+  </div>
+</template>
+
+<script setup>
+import {ref} from 'vue'
+import HelloWorld from "./HelloWorld";	// 直接引用组件，vue会自动注册
+
+let msg = ref('哈哈')
+let setMsg = (val)=>{
+  msg.value = val
+}
+// 无需return数据
+</script>
+```
+
+```vue
+// HelloWorld.vue
+<template>
+  <div>
+    <p>接收的属性：{{ msg }}</p>
+    <button @click="changeMsg">改变msg</button>
+  </div>
+</template>
+
+<script setup>
+import {defineProps, defineEmits} from "vue";
+
+let props = defineProps({		// 接收props
+  msg: {
+    type: String,
+    default: ''
+  }
+})
+
+let emit = defineEmits(['setMsg'])	// 定义传递的emit
+let changeMsg = () => {
+  emit('setMsg', 'aaa')
+}
+</script>
+```
 

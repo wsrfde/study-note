@@ -86,7 +86,7 @@ tags:
 </template>
 ```
 
-知识点：当`slot`不使用name属性时，默认name为default
+知识点：当`slot`不使用name属性时，`默认name为default`
 
 #### 插槽语法糖
 
