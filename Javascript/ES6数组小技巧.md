@@ -143,3 +143,35 @@ arr.find((item, index) => {
 
 
 
+### Array.from()方法
+
+在常用代码中，我们经常会遍历所有li对象，通过以下方法来获取，并且试着去遍历每个item
+
+```js
+document.getElementsByTagName('li').forEach(() => {
+ // Do something here..
+})
+// 会报出以下错误，xxx.forEach is not a function
+```
+
+为什么会这样？这是因为通过getElementsByTagName获取的是 `HTMLCollection` 对象，并不是数组，而是 `类数组` 对象，所以不能使用 `forEach` 来遍历它。
+
+**什么是类数组对象：**类似数组的对象，比如
+
+```js
+let arrayLike = {
+  '0': 'a', 
+  '1': 'b', 
+  '2': 'c', 
+  length: 3
+};
+```
+
+这里就需要用到 `Array.from()` 方法了，`Array.from()` 能将类数组对象转换为数组，进而能够在它上面执行所有数组操作。
+
+```js
+const collection = Array.from(document.getElementsByTagName('li'));
+console.log(Array.isArray(collection))  //t 
+//这里的 collection 是一个数组
+```
+

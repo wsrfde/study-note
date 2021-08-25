@@ -218,8 +218,152 @@ app.directive('demo', {
 
   
 
+### 内置组件：Teleport
+
+> 当我们想要在div#app之外的元素进行封装组件（比如弹窗Toast），防止对#app内容进行干扰时，便可使用teleport
+
+teleport翻译过来是心灵传输、远距离运输的意思
+
+**teleport用法：**
+
+* `to`：指定将其中的内容移动到的目标元素，可以使用选择器
+* `disabled`：是否禁用 teleport 的功能
+
+```vue
+<template>
+  <div>
+    <teleport to="body">
+      <h2>Viceroy</h2>
+    </teleport>
+    <!-- 如果有多个teleport并且目标相同（To的值相同），则会合并插入到目标元素中 -->
+  </div>
+</template>
+```
+
+![](./img/vue3-advanced-note/teleport.png)
+
+### 认识Vue插件
+
+> 通常我们向Vue全局添加一些功能时，会采用插件的模式，
+
+插件可以完成的功能没有限制，比如下面的几种都是可以的： 
+
+* 添加全局方法或者 property，通过把它们添加到 `config.globalProperties` 上实现；
+
+* 添加全局资源：`指令/过滤器/过渡`等； 
+
+* 通过`全局 mixin` 来添加一些组件选项； 
+
+* `一个库，提供自己的 API`，同时提供上面提到的一个或多个功能；
+
+#### 两种编写方式
+
+* **对象类型：**一个对象，但是必须包含一个 install 的函数，该函数会在安装插件时执行； 
+
+  ```js
+  export default {
+    install(app) {
+      app.config.globalProperties.$name = 'viceroy'; // 全局变量为了防止重复命名，一般都会在前面加上$或者_
+    }
+  }
+  ```
+
+* **函数类型：**一个function，这个函数会在安装插件时自动执行
+
+  ```js
+  export default function (app){
+    // app.components();
+    // app.directive();
+  }
+  ```
+
+#### 使用插件
+
+在main.js中导入并使用
+
+```js
+// main.js
+import pluginObject from './plugins/plugin_object';
+
+const app = createApp(App)
+app.use(pluginObject) // 当调用use方法时，app会自动调用对象中的install方法，并且传入app对象
+```
+
+#### 获取插件中定义的全局变量
+
+```vue
+<script>
+import { getCurrentInstance } from 'vue';
+export default {
+  mounted() {
+    console.log(this.$name)	// optionsAPI中可以通过this直接拿到
+  },
+  setup() { 	// setup中则要通过getCurrentInstance中获取
+    const instance = getCurrentInstance()
+    console.log(instance.appContext.config.globalProperties.$name)
+  }
+}
+</script>
+```
 
 
-该学习： 认识Teleport
 
-53：18
+### SFC新特性：style标签的v-bind
+
+SFC：单文件组件（即.vue 文件）
+
+> 除了<script setup>Composition API编译语法糖，
+>
+> 还新增了<style> v-bind，用于在 SFC `<style>` 标签中，组件数据动态驱动CSS 值。并且该指令适用于<script setup>语法糖
+
+```vue
+<template>
+  <h1>Hello Vue3.2</h1>
+  <h2>{{ color }}</h2>
+  <button @click="color = 'red'">color red</button>
+  <button @click="fontSize = '40px'">fontSize 40px</button>
+</template>
+
+<script setup>
+import { ref } from "vue";
+const color = ref("pink");
+const fontSize = ref("18px");
+</script>
+
+<style scoped>
+h1 {
+  color: v-bind(color);	 /* 通过v-bind动态绑定样式 */
+  /* 其原理就是自定义属性将通过内联样式应用于组件的根元素，并在数值更改时进行响应更新。 */
+}
+h2 {
+  font-size: v-bind(fontSize);
+}
+</style>
+```
+
+
+
+### v-memo
+
+> 主要用来处理大型 `v-for` 列表，获取最大性能。
+
+介绍：可实现对部分模板树的记忆功能。当`v-memo` 命中时，不仅允许 Vue 跳过虚拟 DOM 差异、甚至可以完全跳过新 VNode 的创建步骤
+
+```html
+<div v-for="user of users" :key="user.id" v-memo="[user.name]">
+  {{ user.name }}
+</div>
+```
+
+这个例子使用`v-memo`，不会重新创建虚拟元素，并且会重新使用前一个元素，除非`v-memo`的条件发生变化。这可能看起来是一个很小的改进，但如果您渲染大量元素，它实际上是性能的巨大改进。
+
+
+
+`v-memo`还可以接受一组条件，例如：
+
+```html
+<div v-for="user of users" :key="user.id" v-memo="[user.name, selectedUserId === user.id]">
+  <p :class="{ red: selectedUserId === user.id }">{{ user.name }}</p>
+</div>
+```
+

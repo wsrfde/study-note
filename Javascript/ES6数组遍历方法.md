@@ -83,7 +83,7 @@ forEach和map的区别是没有返回值
 
 ```javascript
 const arr = [1,2,3,4,5]
-let newArr = arr.reduce(function (preValue,nowValue) {
+let newArr = arr.reduce(function (preValue,nowValue,currentIndex, array) {
   return preValue+nowValue;
 })
 console.log(newArr);

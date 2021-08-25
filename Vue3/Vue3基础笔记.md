@@ -123,6 +123,31 @@ Vue.createApp({
 
   因为passive=true等于提前告诉了浏览器，touchstart和touchmove不会阻止默认事件，手刚开始触摸，浏览器就可以立刻给与响应；否则，手触摸屏幕了，但要等待touchstart和touchmove的结果，多了这一步，响应时间就长了，用户体验也就差了。
 
+#### `v-bind`的修饰符
+
+- `.prop` ： 被用于强制绑定 DOM 属性 (property)，设置的自定义属性不会在渲染后的 HTML 标签里显示。
+
+  * 通过自定义属性存储变量，避免暴露数据
+
+  - 防止污染 HTML 结构
+
+  ```html
+  <input id="input" :data.prop="inputData"></input>
+  // 渲染后HTML标签结构
+  <input id="input"></input>
+  ```
+
+- `.attr` ： 被用于强制绑定 DOM 属性 (attribute)，和prop刚好相反
+
+  ```html
+  <a :title.prop="firstTabTooltip" :aria-selected.attr="isFirstTabSelected">First tab</a>
+  
+  <!-- 两个简写方法 -->
+  <a .title="firstTabTooltip" ^aria-selected="isFirstTabSelected">First tab</a>
+  ```
+
+
+
 ### 侦听器watch
 
 除了vue2中的watch用法，还增加了一个`$watch` 的API，具体用法如下

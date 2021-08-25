@@ -955,7 +955,7 @@ export default function (key, value) {
 
 ### setp顶层编写方法
 
-> 这个是实验性特性，不建议大量使用（目前版本vue3.0）
+> **已经由实验状态正式毕业，现提供稳定版本**
 
 > 官方使用文档：https://github.com/vuejs/rfcs/blob/master/active-rfcs/0040-script-setup.md
 
@@ -977,6 +977,7 @@ import {ref} from 'vue'
 
 let count = ref(0)
 let changCount = () => count.value++
+// 无需再return出去，可直接使用
 </script>
 ```
 
