@@ -543,7 +543,7 @@ export default {
     //     id: '#' + count
     //   },
     // },this.$slots.default)
-    // return h('h'+this.name,{},this.$slots.default)
+
     
     let tag = 'h' + this.tagNum;
     //  <> 代表html   {} 代表js

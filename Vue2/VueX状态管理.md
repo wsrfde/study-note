@@ -28,7 +28,6 @@ Vuex 也集成到 Vue 的官方调试工具 devtools extension，提供了诸�
 	2. 创建Vuex.Store，配置其状态/变动/异步等
 	
 	3. 导出store，并在main.js中导入，挂载。
-			
 		```js
 		//当挂载时，内部其实在执行如下操作
 			Vue.prototype.$store = store
