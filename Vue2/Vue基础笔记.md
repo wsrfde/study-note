@@ -100,10 +100,10 @@ tags:
 	
 * .{keyCode | keyAlias} - 只当事件是从特定键触发时才触发回调。
 
-   ```js
+   ```html
    <input type="text" @keyup="keyup($event.which)"> 	//监听键码
-   <input type="text" @keyup.e="keyup()"> 
-   <input type="text" @keyup.13='keyup()'>
+   <input type="text" @keyup.enter="keyup()">  //监听键盘字符
+   <input type="text" @keyup.13='keyup()'>		// 监听简码
    ```
 
 * .self - 只当在 event.target 是当前元素自身时触发处理函数 

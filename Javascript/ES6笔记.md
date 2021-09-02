@@ -641,43 +641,152 @@ w.showAge();
 w.showWork();
 ```
 
-### set的使用
+### Set的使用
 
-set有点像数组，但是里面不能放重复的东西
+#### Set
 
-* add		添加数组
-* size		获取length
-* has		检查是否拥有某个值
-* forEach	遍历数组
-* delete	删除其中某个值
-* clear		清空数组
+> 它类似于数组，但是成员的值都是唯一的，没有重复的值。
+
+* `add`		      添加数组
+* `size`	    	获取length
+* `has`		      检查是否拥有某个值
+* `forEach`	遍历数组
+* `delete`	   删除其中某个值
+* `clear`	 	清空数组
 
 ```js
-let arr = new Set('123');
+let arr = new Set('123'); // === new Set([1,2,3])
 console.log(arr)	//{"1", "2", "3"}
 console.log(arr.add('4'))	//{"1", "2", "3", "4"}
 console.log(arr.has('3'))	//true
 arr.forEach(res =>{
-	console.log(res+'a')		//1a 2a 3a 4a
+	console.log(res)		//1 2 3 4
 })
+console.log([...arr])		// [1,2,3,4]
 arr.delete('2')
 console.log(arr)	//{"1", "3", "4"}
 arr.clear()
 console.log(arr)	// {}
 ```
 
-### map的使用
+##### Set结构转数组
 
-map和set的区别是，里面是使用键值对的形式进行储存数据
+* 数组解构  `[...new Set(arr)]`
+* Array.from   `Array.from(new Set(arr))`
 
-用法和set差不多，直接上源码
+##### Set方法取并集、交集、差集
+
+```js
+let a = new Set([1, 2, 3]);
+let b = new Set([4, 3, 2]);
+
+// 并集
+let union = new Set([...a, ...b]);
+// Set {1, 2, 3, 4}
+
+// 交集
+let intersect = new Set([...a].filter((x) => b.has(x)));
+// set {2, 3}
+
+// （a 相对于 b 的）差集
+let difference = new Set([...a].filter((x) => !b.has(x)));
+// Set {1}
+```
+
+
+
+#### WeakSet
+
+##### 与Set的区别
+
+> WeakSet 结构与 Set 类似，也是不重复的值的集合。但是，它与 Set 有两个区别。
+
+**区别一：**`WeakSet 的成员只能是对象`，而不能是其他类型的值。
+
+```js
+const ws = new WeakSet();
+ws.add(1);
+// TypeError: Invalid value used in weak set
+ws.add({name:'vicer'});		// [{name:'vicer'}]
+ws.add([1,2,3]);					// [{name:'vicer'},[1,2,3]]
+```
+
+**区别二：**`WeakSet 中的对象都是弱引用`。即如果其他对象都不再引用该对象，那么垃圾回收机制会自动回收该对象所占用的内存，不考虑该对象还存在于 WeakSet 之中。
+
+##### WeakSet的使用
+
+- add：向 WeakSet 实例添加一个新成员。
+- delete：清除 WeakSet 实例的指定成员。
+- has：返回一个布尔值，表示某个值是否在 WeakSet 实例之中。
+
+```js
+const ws = new WeakSet();
+const obj = {};
+const foo = {};
+
+ws.add(obj);
+ws.has(foo); // false
+ws.delete(obj);
+```
+
+
+
+### Map的使用
+
+#### Map
+
+> Map使用键值对储存数据，并且键的范围不限于字符串，各种类型的值（包括对象）都可以当作键。普通JS对象只能用字符串作为键。如果你需要“值—值”的对应，那么使用Map比Object更合适
+
+* `set(key,value) | ([item,item])`      新增Map结构或者更新已存在键值，返回当前的`Map`对象，
+
+  ```js
+  // 除了传入键值对，还可以直接传入可迭代，且每个成员都是一个双元素的数组的数据结构，也就是说，Set和Map都可以用来生成新的 Map
+  let m0 = new Map([
+    ["a", "张三"],
+    ["b", "李四"],
+  ]);
+  m0.get("a"); // "张三"
+  
+  const set = new Set([
+    ["foo", 1],
+    ["bar", 2],
+  ]);
+  const m1 = new Map(set);
+  m1.get("foo"); // 1
+  
+  const m2 = new Map([["baz", 3]]);
+  const m3 = new Map(m2);
+  m3.get("baz"); // 3
+  
+  // 因为返回返回当前的`Map`对象，因此可以采用链式写法。
+  let map = new Map();
+  map.set("foo", true).set("bar", false);
+  ```
+
+* `size`	    	获取length
+
+* `get`              获取对应key的值
+
+* `has`		      检查是否拥有某个值
+
+* `delete`	   删除其中某个值
+
+* `clear`	 	清空数组
+
+* `forEach`	遍历数组
+
+* `keys`            返回键名的遍历器
+
+* `values`       返回键值的遍历器
+
 ```js
 let food = new Map();
-let fruit = '水果',cook = function(){},dessert = '甜点';
+let fruit = '水果',cook = function(){},dessert = {name:'甜点'};
 food.set(fruit,'柠檬')	
 food.set(cook,'eating')
 food.set(dessert,'甜甜圈')	
-console.log(food)			//{"水果" => "柠檬", ƒ => "eating", "甜点" => "甜甜圈"}
+console.log(food)			//{"水果" => "柠檬", ƒ => "eating", {...} => "甜甜圈"}
+console.log(food.get(fruit))	// 柠檬
 console.log(food.size)//3
 food.delete(fruit)
 console.log(food.has(fruit))//false
@@ -685,9 +794,69 @@ food.clear()
 console.log(food)	//{}
 ```
 
+##### Map结构转为数组结构
+
+```javascript
+const map = new Map([
+  [1, 'one'],
+  [2, 'two'],
+  [3, 'three'],
+]);
+
+[...map]
+// [[1,'one'], [2, 'two'], [3, 'three']]
+
+[...map.keys()]
+// [1, 2, 3]
+
+[...map.values()]
+// ['one', 'two', 'three']
+```
+
+##### Map结构转为对象
+
+```js
+function strMapToObj(strMap) {
+  let obj = Object.create(null);
+  for (let [k, v] of strMap) {
+    obj[k] = v;
+  }
+  return obj;
+}
+
+const myMap = new Map().set("yes", true).set("no", false);
+strMapToObj(myMap);
+// { yes: true, no: false }
+```
+
+##### 对象转为 Map
+
+对象转为 Map 可以通过`Object.entries()`。
+
+```javascript
+let obj = { a: 1, b: 2 };
+let map = new Map(Object.entries(obj));
+```
+
+此外，也可以自己实现一个转换函数。
+
+```javascript
+function objToStrMap(obj) {
+  let strMap = new Map();
+  for (let k of Object.keys(obj)) {
+    strMap.set(k, obj[k]);
+  }
+  return strMap;
+}
+
+objToStrMap({ yes: true, no: false });
+// Map {"yes" => true, "no" => false}
+```
+
 ### ES7
 
 #### 幂运算
+
 ```JS
 let a = 3;
 alert(a**2);	//3的2次方
