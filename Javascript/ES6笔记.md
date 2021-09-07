@@ -715,9 +715,11 @@ ws.add([1,2,3]);					// [{name:'vicer'},[1,2,3]]
 
 ##### WeakSet的使用
 
-- add：向 WeakSet 实例添加一个新成员。
-- delete：清除 WeakSet 实例的指定成员。
-- has：返回一个布尔值，表示某个值是否在 WeakSet 实例之中。
+> 由于其特殊性，无法遍历及使用其他方法，能使用的api如下
+
+- `add`              向 WeakSet 实例添加一个新成员
+- `delete`       清除 WeakSet 实例的指定成员
+- `has`              返回一个布尔值，表示某个值是否在 WeakSet 实例之中
 
 ```js
 const ws = new WeakSet();
@@ -737,9 +739,14 @@ ws.delete(obj);
 
 > Map使用键值对储存数据，并且键的范围不限于字符串，各种类型的值（包括对象）都可以当作键。普通JS对象只能用字符串作为键。如果你需要“值—值”的对应，那么使用Map比Object更合适
 
-* `set(key,value) | ([item,item])`      新增Map结构或者更新已存在键值，返回当前的`Map`对象，
+* `set(key,value) | ([item,item])`      新增Map结构或者更新已存在键值，并返回当前的`Map`对象，
 
   ```js
+  const key = { foo: 1 };
+  let map = new Map();
+  map.set(key,'bar')
+  map.get(key);	// "bar"
+  
   // 除了传入键值对，还可以直接传入可迭代，且每个成员都是一个双元素的数组的数据结构，也就是说，Set和Map都可以用来生成新的 Map
   let m0 = new Map([
     ["a", "张三"],
@@ -853,6 +860,55 @@ objToStrMap({ yes: true, no: false });
 // Map {"yes" => true, "no" => false}
 ```
 
+#### WeakMap
+
+##### 与Map的区别
+
+> `WeakMap`结构与`Map`结构类似，也是用于生成键值对的集合。
+
+**区别一：**`WeakMap`只接受对象（或数组）作为键名，不接受其他类型的值作为键名
+
+```js
+// WeakMap 可以使用 set 方法添加成员
+const wm1 = new WeakMap();
+const key1 = { foo: 1 };
+wm1.set(key1, 2);
+wm1.get(key1); // 2
+
+// WeakMap 也可以接受一个数组，
+// 作为构造函数的参数
+const key2 = [1, 2, 3];
+const wm2 = new WeakMap([
+  [key2, "foo"]
+]);
+wm2.get(key2); // "bar"
+```
+
+**区别二：**`它的键名所引用的对象都是弱引用`，即垃圾回收机制不将该引用考虑在内。因此，只要所引用的对象的`其他引用都被清除`，垃圾回收机制就会释放该对象所占用的内存。
+
+```js
+const wm = new WeakMap();
+
+const element = document.getElementById("example");
+
+wm.set(element, "some information");
+wm.get(element); // "some information"
+// WeakMap 里面对element的引用就是弱引用，不会被计入垃圾回收机制。
+// 一旦消除对该节点的引用，它占用的内存就会被垃圾回收机制释放。Weakmap 保存的这个键值对，也会自动消失。
+element = null;
+```
+
+**注意，WeakMap 弱引用的只是键名，而不是键值。键值依然是正常引用。**
+
+##### WeakMap的使用
+
+> 由于其特殊性，无法遍历及使用其他方法，能使用的api如下
+
+* `get`        获取对应key的值
+* `set`        新增Map结构或者更新已存在键值，并返回当前的`WeakMap`对象
+* `has`         检查是否拥有某个值
+* `delete`      删除其中某个值
+
 ### ES7
 
 #### 幂运算
@@ -929,3 +985,4 @@ console.log(iterators.next())
 console.log(iterators.next())	
 console.log(iterators.next())	
 ```
+

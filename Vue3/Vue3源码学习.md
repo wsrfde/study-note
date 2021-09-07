@@ -76,6 +76,8 @@
 ```
 
 ```js
+// render.js
+
 // 功能一：h函数
 const h = (tag, porps, children) => {
   return {
@@ -136,12 +138,13 @@ const patch = (n1, n2) => {
     }
     // 对旧属性进行删除
     for (let key in oldProps) {
+      // 在上面给newProps添加事件监听时，因为事件函数内存地址不同，所以即使相同函数也会判断不同，导致重复添加。
+      // 所以这里删除oldProps所有事件
+      if (key.startsWith('on')) {
+        el.removeEventListener(key.slice(2).toLowerCase(), oldProps[key]);
+      }
       if (!(key in newProps)) {
-        if (key.startsWith('on')) {
-          el.removeEventListener(key.slice(2).toLowerCase(), oldProps[key]);
-        } else {
-          el.removeAttribute(key);
-        }
+        el.removeAttribute(key);
       }
     }
 
@@ -194,9 +197,11 @@ const patch = (n1, n2) => {
 
 #### 响应式系统实现
 
-##### watchEffect依赖收集
+##### reactive的Vue2实现
 
 ```js
+// reactive.js
+
 class Dep {
   constructor() {
     this.subscribers = new Set();
@@ -210,27 +215,178 @@ class Dep {
     this.subscribers.forEach((effect) => effect());
   }
 }
-let dep = new Dep();
 
 let watchData = null;
 function watchEffect(effect) {
   watchData = effect;
-  dep.depend(); // 添加依赖
   effect(); // 模拟watchEffect首次使用时会自动调用一次
   watchData = null; // 清空准备下次使用
 }
 
-let info = {
-  counter:10
-};
-watchEffect(() => {
-  console.log(info.counter * 2);
-});
-watchEffect(() => {
-  console.log(info.counter * info.counter);
-});
+//3.  为了每个属性都有依赖，使用如下数据结构
+// WeakMap = {
+//   obj1{}:new Map({
+//     key1:dep1,
+//     key2:dep2
+//   }),
+//   obj2{}:new Map({
+//     key1:dep1,
+//   })
+// }
+let targetMap = new WeakMap();
+function getDep(raw, key) { // 把属性存放到targetMap中
+  let target = targetMap.get(raw);
+  if (!target) {
+    target = new Map();
+    targetMap.set(raw, target); // => {obj1{}:new Map()}
+  }
 
+  let dep = target.get(key);
+  if (!dep) {
+    dep = new Dep();
+    target.set(key, dep); // =>  newMap({key1:dep1})
+  }
+  return dep;
+}
+
+function reactive(raw) {
+  Object.keys(raw).forEach((key) => {
+    // 2. 获取(或创建)当前对象属性的依赖
+    let dep = getDep(raw, key);
+    let value = raw[key];
+    Object.defineProperty(raw, key, {
+      get() {
+        // 4. 第一次执行时，把当前key所在的函数，添加到当前key对应dep中，为发生通知做准备
+        dep.depend();
+        return value;
+      },
+      set(newValue) {
+        if (value !== newValue) {
+          value = newValue;
+          //5. 属性发生改变时通知
+          dep.notify();
+        }
+      },
+    });
+  });
+  return raw
+}
+
+// 1. 对数据添加依赖
+let info = reactive({
+  counter: 10,
+  name: 'vicer',
+});
+let foo = reactive({ bar: 'bar' });
+
+watchEffect(() => {
+  console.log('watch1:', info.counter * 2);
+});
+watchEffect(() => {
+  console.log('watch2:', info.counter * info.counter);
+});
+watchEffect(() => {
+  console.log('watch3:', info.name);
+});
+watchEffect(() => {
+  console.log('watch4:', foo.bar);
+});
+// 改变属性发生通知
 info.counter++;
-dep.notify(); // 发送通知
+// info.name = 'aaa'
+// foo.bar = 'bbb'
+```
+
+##### reactive的Vue3实现
+
+```js
+// 与上述vue2实现相似，只有reactive函数不同，把defineProperty换成Proxy
+function reactive(raw) {
+  return new Proxy(raw, {	// Proxy会劫持整个对象，所以无需遍历
+    get(target, key) {
+      const dep = getDep(target, key);
+      dep.depend();
+      return target[key];
+    },
+    set(target, key, newValue) {
+      const dep = getDep(target, key);
+      target[key] = newValue;
+      dep.notify();
+    },
+  });
+}
+```
+
+##### 为什么Vue3选择Proxy？
+
+**优点：**
+
+* 新增对象时，Vue2需要再次调用definedProperty；而 Proxy 劫持的是整个对象，不需要做特殊处理；
+* 修改对象时，defineProperty修改原来的 obj 对象就可以触发拦截；而使用 proxy，就必须修改代理对象，即 Proxy 的实例才可以触发拦截
+* Proxy 的API比 defineProperty 更丰富，比如has，deleteProperty等
+* Proxy 作为新标准将受到浏览器厂商重点持续的性能优化
+
+**缺点：**
+
+Proxy 不兼容IE，也没有 polyfill, defineProperty 能支持到IE9
+
+#### 应用程序入口实现
+
+```js
+// createApp.js
+
+function createApp(rootComponent) {
+  return {
+    mount(select) {	// vue中会返回一个mount方法，所以这里返回mount函数
+      const container = document.querySelector(select);
+      let isMount = false;
+      let oldVnode = null;
+
+      watchEffect(function () {
+        if (!isMount) {
+          oldVnode = rootComponent.render();	//render中使用了reactive数据，watchEffect函数使用时进行收集依赖
+          mount(oldVnode, container);
+          isMount = true
+        } else {
+          const newVnode = rootComponent.render();	// 数据改变时，需要重新获取，并进行patch
+          patch(oldVnode, newVnode);
+          oldVnode = newVnode;	// 重新赋值oldVnode，为下次patch做准备
+        }
+      });
+    },
+  };
+}
+```
+
+#### 使用Mini-Vue
+
+> 可以把渲染系统，响应式系统，应用入口中所有函数统一导出并在一个文件引用，当使用时直接引入即可
+
+```html
+<div id="app"></div>
+
+<script src="./mini-vue/render.js"></script>
+<script src="./mini-vue/reactive.js"></script>
+<script src="./mini-vue/createApp.js"></script>
+<script>
+  const App = {
+    data:reactive({
+      counter:0
+    }),
+    render(){
+      return h('div',null,[
+        h('h2',null,`当前计数：${this.data.counter}`),
+        h('button',{
+          onClick:()=>{
+            this.data.counter++;
+          }
+        },'+1')
+      ])
+    }
+  }
+
+  const app = createApp(App);
+  app.mount('#app');
+</script>
 ```
 
