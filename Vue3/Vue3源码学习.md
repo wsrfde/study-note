@@ -390,3 +390,42 @@ function createApp(rootComponent) {
 </script>
 ```
 
+### 源码调试
+
+一、在GitHub上搜索` vue-next` 
+
+二、下载下来在`package.json`中，在`dev`命令中增加`--sourcemap` 
+
+三、引入Vue，然后进行`debugger`
+
+### 面试题：
+
+#### 组件的VNode和组件的instance有什么区别
+
+* 组件的VNode：虚拟DOM
+
+* 组件的instance：虚拟DOM树的一个节点，用来保存该节点组件的各种状态，如data/setup/methods，我们怎么知道这些状态是谁的，就是通过instance来保存的
+
+#### Vue3性能优化之Block Tree
+
+在vue3中，除了响应式改为了proxy，在代码编译及diff算法中使用BlockTree进行了优化。
+
+1. 对于不会改变的静态节点，进行作用域提升
+2. 节点中diff算法时，把动态节点放到BlockTree中，只对比动态节点
+
+
+
+#### Vue3中同时在data和setup中定义同名变量时，template将会使用哪里面的值？
+
+答案：setup定义变量生效。
+
+原因：在组件中获取proxy属性走get方法，源码中get方法取值顺序如下
+
+`setup => data => props => ctx(methods/computed)`
+
+![](./img/vue-source/vue3中proxy取值顺序.png)
+
+**如果定义了data和computed同名变量，优先取值data**
+
+01:14
+

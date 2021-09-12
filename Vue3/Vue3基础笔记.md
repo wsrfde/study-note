@@ -49,14 +49,6 @@ template元素：是一种用于保存客户端内容的机制，该内容再加
 
 **注意：** 在Vue2中template模板中只允许有一个根元素，现在Vue3中不再有这个限制，可以有多个跟元素
 
-### 源码调试
-
-一、在GitHub上搜索` vue-next` 
-
-二、下载下来在`package.json`中，在`dev`命令中增加`--sourcemap` 
-
-三、引入Vue，然后进行`debugger`
-
 ### methods中为什么不能使用箭头函数
 
 ```js
