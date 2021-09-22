@@ -33,29 +33,35 @@ URL的hash也就是锚点(#), 本质上是改变window.location的href属性.
 
 #### HTML5中history模式：
 
-**1. pushState**  
+**1. pushState**
 把url push进去，类似栈结构，遵循先入后出
 
 	history.pushState({},'','home')
-**2. back**  
-返回前一页面
+**2. popState** 
+路径的退回，类似栈结构，遵循先入后出
 
-	history.back()
-**3. forward**  
+	history.popState()
+
+**3. replaceState** 
+替换url，不会保留历史记录（无法退回）
+
+	history.replaceState({},'','home')
+
+**3. go** 
+history.go指跳转到指定页面
+
+	history.go(1) 前进页面，等同于 history.forward()
+	history.go(-1) 返回上一页，等同于 history.back()
+
+**4. forward** 
 前进下一页面
 
 	history.forward()
 
-**4. replaceState**  
-替换url，不会保留历史记录
+**5. back** 
+返回前一页面
 
-	history.replaceState({},'','home')
-**5. go**  
-history.go指跳转到指定页面
-
-	history.go(-1) 等同于 history.back()
-	history.go(1) 等同于 history.forward()
-
+	history.back()
 <br>
 
 ### 安装和使用router

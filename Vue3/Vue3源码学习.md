@@ -425,7 +425,7 @@ function createApp(rootComponent) {
 
 ![](./img/vue-source/vue3中proxy取值顺序.png)
 
-**如果定义了data和computed同名变量，优先取值data**
+根据此源码可以得到其他问题答案，**如果定义了data和computed同名变量，优先取值data**
 
 01:14
 
